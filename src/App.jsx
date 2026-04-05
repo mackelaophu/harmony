@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Music, Settings, Info, X, Play, Square } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Music, Settings, Info, X, Play, Square, Cable } from 'lucide-react';
 import ChordGraph from './components/ChordGraph';
 import PianoKeyboard from './components/PianoKeyboard';
 import RecordingStudio from './components/RecordingStudio';
 import { audioEngine } from './utils/AudioEngine';
+import { midiEngine } from './utils/MidiEngine';
 import { normalizeNote } from './utils/MusicTheory';
 import { RHYTHM_STYLES } from './utils/RhythmLibrary';
 import './index.css';
@@ -18,11 +19,52 @@ function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [recordedNotes, setRecordedNotes] = useState([]);
 
+  // MIDI STATES
+  const [activeMidiNotes, setActiveMidiNotes] = useState([]);
+  const [midiStatus, setMidiStatus] = useState("Đang chờ MIDI...");
+
+  const isRecordingRef = useRef(isRecording);
+  const isPausedRef = useRef(isPaused);
+
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+    isPausedRef.current = isPaused;
+  }, [isRecording, isPaused]);
+
+  // Handle Note from Mouse (Virtual Piano)
   const handleNotePlayed = (note) => {
     if (isRecording && !isPaused) {
       setRecordedNotes(prev => [...prev, note]);
     }
   };
+
+  // MIDI Initialization
+  useEffect(() => {
+    const handleMidiOn = (note, velocity) => {
+        setActiveMidiNotes(prev => {
+            if (!prev.includes(note)) return [...prev, note];
+            return prev;
+        });
+        
+        audioEngine.init().then(() => {
+             audioEngine.playNote(note, '2n', velocity);
+        }).catch(console.error);
+
+        if (isRecordingRef.current && !isPausedRef.current) {
+             setRecordedNotes(prev => [...prev, note]);
+        }
+    };
+    
+    const handleMidiOff = (note) => {
+        setActiveMidiNotes(prev => prev.filter(n => n !== note));
+    };
+
+    midiEngine.init(
+        (device, status) => setMidiStatus(status),
+        handleMidiOn,
+        handleMidiOff
+    );
+  }, []);
 
   const handleStartRecording = () => {
     setIsRecording(true);
@@ -65,6 +107,10 @@ function App() {
         </div>
 
         <div className="nav-actions">
+          <div className="midi-status" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(52, 211, 153, 0.1)', padding: '6px 12px', borderRadius: '100px', border: '1px solid rgba(52, 211, 153, 0.2)', fontSize: '11px', color: '#34d399', fontWeight: '600' }}>
+             <Cable size={14} />
+             {midiStatus}
+          </div>
           <button className="icon-btn" onClick={() => setShowInfo(!showInfo)}>
             <Info size={18} />
           </button>
@@ -141,8 +187,13 @@ function App() {
                 <select 
                   value={activeRhythm} 
                   onChange={(e) => {
-                    setActiveRhythm(e.target.value);
-                    if (e.target.value) setIsPlayingRhythm(true);
+                    const val = e.target.value;
+                    setActiveRhythm(val);
+                    if (val) {
+                      audioEngine.init().then(() => setIsPlayingRhythm(true)).catch(console.error);
+                    } else {
+                      setIsPlayingRhythm(false);
+                    }
                   }}
                   style={{ flex: 1, padding: '8px 12px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', outline: 'none' }}
                 >
@@ -157,7 +208,11 @@ function App() {
                      <Square size={14} fill="currentColor" />
                    </button>
                 ) : (
-                   <button onClick={() => { if(activeRhythm) setIsPlayingRhythm(true); }} style={{ padding: '8px 16px', backgroundColor: '#38bdf8', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: activeRhythm ? 1 : 0.5 }}>
+                   <button onClick={() => { 
+                      if(activeRhythm) {
+                         audioEngine.init().then(() => setIsPlayingRhythm(true)).catch(console.error);
+                      } 
+                   }} style={{ padding: '8px 16px', backgroundColor: '#38bdf8', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: activeRhythm ? 1 : 0.5 }}>
                      <Play size={14} fill="currentColor" />
                    </button>
                 )}
@@ -169,8 +224,8 @@ function App() {
 
       {/* Footer / Piano */}
       <footer className="piano-footer">
-        <div className="footer-panel">
-          <PianoKeyboard activeChordNotes={selectedChord?.notes || []} onNotePlayed={handleNotePlayed} />
+        <div className="footer-panel" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <PianoKeyboard activeChordNotes={selectedChord?.notes || []} activeMidiNotes={activeMidiNotes} onNotePlayed={handleNotePlayed} />
         </div>
       </footer>
     </div>

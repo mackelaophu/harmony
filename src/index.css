@@ -177,11 +177,18 @@ body {
 .piano-keyboard-wrapper {
   position: relative;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
   max-width: 900px;
-  height: 180px;
+  height: 190px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 15px;
 }
+
+.piano-keyboard-wrapper::-webkit-scrollbar { height: 8px; }
+.piano-keyboard-wrapper::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 4px; }
+.piano-keyboard-wrapper::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
 
 .white-key {
   width: 40px;
