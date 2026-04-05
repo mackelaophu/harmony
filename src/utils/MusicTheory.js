@@ -103,3 +103,54 @@ export const getChordContext = (id, type) => {
   
   return { id, type, notes, details };
 };
+
+export const inferChordsFromNotes = (playedNotes) => {
+  if (!playedNotes || playedNotes.length === 0) return [];
+  
+  const uniquePitches = [...new Set(playedNotes.map(n => normalizeNote(n.replace(/[0-9]/g, ''))))];
+  if (uniquePitches.length === 0) return [];
+
+  const results = [];
+  const checkChord = (id, type) => {
+      const chordContext = getChordContext(id, type);
+      const chordNotes = chordContext.notes.map(normalizeNote);
+      
+      let matchCount = 0;
+      uniquePitches.forEach(p => {
+           if (chordNotes.includes(p)) matchCount++;
+      });
+      
+      const coverage = matchCount / chordNotes.length;
+      const fit = matchCount / uniquePitches.length;
+      
+      if (matchCount > 0) {
+          results.push({
+              chord: chordContext,
+              score: coverage * 1.5 + fit * 1.0,
+              matches: matchCount
+          });
+      }
+  };
+
+  for (let i = 0; i < 12; i++) {
+      checkChord(MAJOR[i], 'major');
+      checkChord(MINOR[i], 'minor');
+      checkChord(DOM_MAJOR[i], 'dom7');
+      checkChord(DIMINISHED[i], 'dim');
+  }
+
+  const uniqueResults = [];
+  const seen = new Set();
+  results.forEach(r => {
+       const key = `${r.chord.id}-${r.chord.type}`;
+       if (!seen.has(key)) {
+           seen.add(key);
+           uniqueResults.push(r);
+       }
+  });
+
+  uniqueResults.sort((a, b) => b.score - a.score);
+
+  return uniqueResults.slice(0, 5); 
+};
+

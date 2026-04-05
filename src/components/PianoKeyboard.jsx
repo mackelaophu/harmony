@@ -5,7 +5,7 @@ import { normalizeNote } from '../utils/MusicTheory';
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-const PianoKeyboard = ({ activeChordNotes = [] }) => {
+const PianoKeyboard = ({ activeChordNotes = [], onNotePlayed }) => {
   const [playingNotes, setPlayingNotes] = useState([]);
 
   const activeSpecificNotes = useMemo(() => {
@@ -38,6 +38,7 @@ const PianoKeyboard = ({ activeChordNotes = [] }) => {
     await audioEngine.init();
     audioEngine.playNote(note);
     setPlayingNotes([note]);
+    if (onNotePlayed) onNotePlayed(note);
     setTimeout(() => setPlayingNotes([]), 300);
   };
 

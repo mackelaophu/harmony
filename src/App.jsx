@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Music, Settings, Info, X, Play, Square } from 'lucide-react';
 import ChordGraph from './components/ChordGraph';
 import PianoKeyboard from './components/PianoKeyboard';
+import RecordingStudio from './components/RecordingStudio';
 import { audioEngine } from './utils/AudioEngine';
 import { normalizeNote } from './utils/MusicTheory';
 import { RHYTHM_STYLES } from './utils/RhythmLibrary';
@@ -12,6 +13,22 @@ function App() {
   const [showInfo, setShowInfo] = useState(false);
   const [activeRhythm, setActiveRhythm] = useState('');
   const [isPlayingRhythm, setIsPlayingRhythm] = useState(false);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [recordedNotes, setRecordedNotes] = useState([]);
+
+  const handleNotePlayed = (note) => {
+    if (isRecording && !isPaused) {
+      setRecordedNotes(prev => [...prev, note]);
+    }
+  };
+
+  const handleStartRecording = () => {
+    setIsRecording(true);
+    setIsPaused(false);
+    setRecordedNotes([]);
+  };
 
   useEffect(() => {
     const play = async () => {
@@ -62,6 +79,16 @@ function App() {
 
       {/* Main Content */}
       <main className="main-content">
+        <RecordingStudio 
+          recordedNotes={recordedNotes}
+          isRecording={isRecording}
+          isPaused={isPaused}
+          onStart={handleStartRecording}
+          onPause={() => setIsPaused(true)}
+          onResume={() => setIsPaused(false)}
+          onStop={() => { setIsRecording(false); setIsPaused(false); setRecordedNotes([]); }}
+          onChordSelect={(chord) => setSelectedChord(chord)}
+        />
         <ChordGraph onChordSelect={(chord) => setSelectedChord(chord)} />
         
         {/* Chord Info Panel */}
@@ -143,7 +170,7 @@ function App() {
       {/* Footer / Piano */}
       <footer className="piano-footer">
         <div className="footer-panel">
-          <PianoKeyboard activeChordNotes={selectedChord?.notes || []} />
+          <PianoKeyboard activeChordNotes={selectedChord?.notes || []} onNotePlayed={handleNotePlayed} />
         </div>
       </footer>
     </div>
