@@ -21,6 +21,18 @@ const PianoKeyboard = ({ activeChordNotes = [], onNotePlayed, activeMidiNotes = 
     }
   }, [activeMidiNotes]);
 
+  // Initial scroll to C2 on load
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      setTimeout(() => {
+        const c2Element = scrollContainerRef.current.querySelector('[data-note="C2"]');
+        if (c2Element) {
+            scrollContainerRef.current.scrollTo({ left: c2Element.offsetLeft, behavior: 'auto' });
+        }
+      }, 100); // small delay to ensure DOM is fully rendered
+    }
+  }, []);
+
   const activeSpecificNotes = useMemo(() => {
     if (!activeChordNotes || activeChordNotes.length === 0) return [];
     const notes = [];

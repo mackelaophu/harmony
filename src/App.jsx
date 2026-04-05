@@ -224,7 +224,7 @@ function App() {
 
       {/* Footer / Piano */}
       <footer className="piano-footer">
-        <div className="footer-panel" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+        <div className="footer-panel" style={{ width: '100%', maxWidth: '100vw', minWidth: 0, display: 'flex', justifyContent: 'flex-start' }}>
           <PianoKeyboard activeChordNotes={selectedChord?.notes || []} activeMidiNotes={activeMidiNotes} onNotePlayed={handleNotePlayed} />
         </div>
       </footer>
