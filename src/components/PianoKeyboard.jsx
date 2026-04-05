@@ -35,18 +35,25 @@ const PianoKeyboard = ({ activeChordNotes = [], onNotePlayed, activeMidiNotes = 
 
   const activeSpecificNotes = useMemo(() => {
     if (!activeChordNotes || activeChordNotes.length === 0) return [];
+    
+    const FLAT_TO_SHARP = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' };
+    const getSharp = (n) => {
+        const norm = normalizeNote(n);
+        return FLAT_TO_SHARP[norm] || norm;
+    };
+
     const notes = [];
-    const rootNorm = normalizeNote(activeChordNotes[0]);
+    const rootSharp = getSharp(activeChordNotes[0]);
     let currentOctave = 4; // Default starting octave for voicings
-    let prevIndex = PITCH_CLASSES.indexOf(rootNorm);
+    let prevIndex = PITCH_CLASSES.indexOf(rootSharp);
     
     activeChordNotes.forEach((n) => {
-        const norm = normalizeNote(n);
-        const idx = PITCH_CLASSES.indexOf(norm);
-        if (idx < prevIndex) {
+        const sharp = getSharp(n);
+        const idx = PITCH_CLASSES.indexOf(sharp);
+        if (idx < prevIndex && prevIndex !== -1) {
             currentOctave++;
         }
-        notes.push(`${norm}${currentOctave}`);
+        notes.push(`${sharp}${currentOctave}`);
         prevIndex = idx;
     });
     return notes;

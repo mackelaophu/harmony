@@ -65,7 +65,7 @@ class AudioEngine {
 
   setPlaybackVoicing(chordNotes) {
     if (!chordNotes || chordNotes.length < 3) return null;
-    const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const FLAT_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
     
     const rootNorm = normalizeNote(chordNotes[0]);
     const bass = `${rootNorm}2`; 
@@ -77,7 +77,7 @@ class AudioEngine {
     let prevIdx = -1;
     const voiced = chordNotes.map(n => {
         const norm = normalizeNote(n);
-        const idx = NOTES.indexOf(norm);
+        const idx = FLAT_NOTES.indexOf(norm);
         if (idx < prevIdx && prevIdx !== -1) oct++;
         prevIdx = idx;
         return `${norm}${oct}`;
