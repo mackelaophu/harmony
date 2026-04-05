@@ -12,6 +12,8 @@ import './index.css';
 function App() {
   const [selectedChord, setSelectedChord] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showExtendedChords, setShowExtendedChords] = useState(true);
   const [activeRhythm, setActiveRhythm] = useState('');
   const [isPlayingRhythm, setIsPlayingRhythm] = useState(false);
 
@@ -114,9 +116,19 @@ function App() {
           <button className="icon-btn" onClick={() => setShowInfo(!showInfo)}>
             <Info size={18} />
           </button>
-          <button className="icon-btn">
-            <Settings size={18} />
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button className="icon-btn" onClick={() => setShowSettings(!showSettings)}>
+              <Settings size={18} />
+            </button>
+            {showSettings && (
+              <div style={{ position: 'absolute', top: '100%', right: '0', marginTop: '8px', background: 'rgba(17, 24, 39, 0.95)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', zIndex: 200, width: '220px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', color: '#f3f4f6' }}>
+                      <input type="checkbox" checked={showExtendedChords} onChange={(e) => setShowExtendedChords(e.target.checked)} style={{ accentColor: '#38bdf8', transform: 'scale(1.2)' }} />
+                      Hiển thị Hợp âm Nâng cao
+                  </label>
+              </div>
+            )}
+          </div>
           <button className="premium-badge">
             Premium
           </button>
@@ -135,7 +147,7 @@ function App() {
           onStop={() => { setIsRecording(false); setIsPaused(false); setRecordedNotes([]); }}
           onChordSelect={(chord) => setSelectedChord(chord)}
         />
-        <ChordGraph onChordSelect={(chord) => setSelectedChord(chord)} />
+        <ChordGraph onChordSelect={(chord) => setSelectedChord(chord)} showExtended={showExtendedChords} />
         
         {/* Chord Info Panel */}
         {selectedChord && (

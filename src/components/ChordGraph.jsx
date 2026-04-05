@@ -30,7 +30,7 @@ const RINGS = [
   { type: 'add9', items: ADD9, r: 920 }
 ];
 
-const ChordGraph = ({ onChordSelect }) => {
+const ChordGraph = ({ onChordSelect, showExtended = true }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [activeNode, setActiveNode] = useState(null);
   const scrollRef = useRef(null);
@@ -47,9 +47,20 @@ const ChordGraph = ({ onChordSelect }) => {
   const cy = 1000;
   const NODE_RADIUS = 32;
 
+  const visibleRings = useMemo(() => {
+     let filtered = RINGS;
+     if (!showExtended) {
+         filtered = RINGS.filter(r => ['dim', 'minor', 'major', 'dom7'].includes(r.type));
+     }
+     return filtered.map((r, idx) => ({
+         ...r,
+         dynamicRadius: showExtended ? r.r : 160 + idx * 100
+     }));
+  }, [showExtended]);
+
   const nodes = useMemo(() => {
     const all = [];
-    RINGS.forEach((ring, ringIdx) => {
+    visibleRings.forEach((ring, ringIdx) => {
         for (let i = 0; i < 12; i++) {
             // Alternate rotation for adjacent rings to create a spider web aesthetic
             const angleOffset = (ringIdx % 2 === 0 ? 0 : 15) * (Math.PI / 180); 
@@ -60,8 +71,8 @@ const ChordGraph = ({ onChordSelect }) => {
                key: `${ring.type}_${i}`,
                id: ring.items[i],
                type: ring.type,
-               x: cx + ring.r * Math.cos(baseAngle),
-               y: cy + ring.r * Math.sin(baseAngle),
+               x: cx + ring.dynamicRadius * Math.cos(baseAngle),
+               y: cy + ring.dynamicRadius * Math.sin(baseAngle),
                notes: context.notes,
                context: context
             });
@@ -69,7 +80,7 @@ const ChordGraph = ({ onChordSelect }) => {
     });
 
     return all;
-  }, []);
+  }, [visibleRings]);
 
   const links = useMemo(() => {
     const all = [];
@@ -77,10 +88,10 @@ const ChordGraph = ({ onChordSelect }) => {
         const nextI = (i + 1) % 12; // Direction of fifths resolving G -> C
         
         // Connect consecutive rings
-        for (let r = 0; r < RINGS.length - 1; r++) {
+        for (let r = 0; r < visibleRings.length - 1; r++) {
             // Because odd rings are offset by 15deg, the path isn't perfectly straight, 
             // It makes a zig-zag radial outward pattern.
-            all.push({ source: `${RINGS[r].type}_${i}`, target: `${RINGS[r+1].type}_${i}`, type: 'uni' });
+            all.push({ source: `${visibleRings[r].type}_${i}`, target: `${visibleRings[r+1].type}_${i}`, type: 'uni' });
         }
         
         // Circle of fifths across the major ring
@@ -97,7 +108,7 @@ const ChordGraph = ({ onChordSelect }) => {
         all.push({ source: `dim_${i}`, target: 'center', type: 'uni' });
     }
     return all;
-  }, []);
+  }, [visibleRings]);
 
   const handleNodeClick = (node) => {
     setActiveNode(node.key);
