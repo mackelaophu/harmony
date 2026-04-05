@@ -39,14 +39,7 @@ function App() {
      return getPopularProgressions(selectedChord.id, selectedChord.type);
   }, [selectedChord]);
 
-  const handlePlayProgression = async (progression, idx) => {
-      if (playingProgressionIdx === idx) {
-          audioEngine.stopRhythm();
-          setPlayingProgressionIdx(null);
-          setActiveProgressionNotes(null);
-          if (progressionTimeoutRef.current) clearTimeout(progressionTimeoutRef.current);
-          return;
-      }
+  const triggerProgressionPlayback = async (progression, idx, passedRhythm, passedTempo) => {
       setPlayingProgressionIdx(idx);
       if (progressionTimeoutRef.current) clearTimeout(progressionTimeoutRef.current);
       
@@ -54,7 +47,7 @@ function App() {
          await audioEngine.init();
          const getTypeByString = (idString) => {
             if (idString.includes('m7b5')) return 'm7b5';
-            if (idString.includes('m7')) return 'min7';
+            if (idString.includes('min7')) return 'min7';
             if (idString.includes('maj7')) return 'maj7';
             if (idString.includes('sus4')) return 'sus4';
             if (idString.includes('sus2')) return 'sus2';
@@ -67,11 +60,11 @@ function App() {
          };
          const contexts = progression.chords.map(c => getChordContext(c, getTypeByString(c)));
          setIsPlayingRhythm(false);
-         audioEngine.playProgressionSequence(contexts, activeRhythm, setActiveProgressionNotes, tempo);
+         audioEngine.playProgressionSequence(contexts, passedRhythm, setActiveProgressionNotes, passedTempo);
          
-         const styleDef = activeRhythm ? RHYTHM_STYLES[activeRhythm] : null;
+         const styleDef = passedRhythm ? RHYTHM_STYLES[passedRhythm] : null;
          const beatsPerBar = styleDef ? styleDef.timeSignature : 4;
-         const msPerMeasure = (60 / tempo) * beatsPerBar * 1000;
+         const msPerMeasure = (60 / passedTempo) * beatsPerBar * 1000;
          const totalMs = progression.chords.length * msPerMeasure;
 
          progressionTimeoutRef.current = setTimeout(() => {
@@ -83,6 +76,17 @@ function App() {
          setPlayingProgressionIdx(null);
          setActiveProgressionNotes(null);
       }
+  };
+
+  const handlePlayProgression = async (progression, idx) => {
+      if (playingProgressionIdx === idx) {
+          audioEngine.stopRhythm();
+          setPlayingProgressionIdx(null);
+          setActiveProgressionNotes(null);
+          if (progressionTimeoutRef.current) clearTimeout(progressionTimeoutRef.current);
+          return;
+      }
+      triggerProgressionPlayback(progression, idx, activeRhythm, tempo);
   };
 
   useEffect(() => {
@@ -293,12 +297,27 @@ function App() {
                   onChange={(e) => {
                     const val = e.target.value;
                     setActiveRhythm(val);
+                    
+                    let newTempo = tempo;
                     if (val) {
                       const def = RHYTHM_STYLES[val];
-                      if (def) setTempo(def.defaultBpm);
-                      audioEngine.init().then(() => setIsPlayingRhythm(true)).catch(console.error);
+                      if (def) {
+                          newTempo = def.defaultBpm;
+                          setTempo(newTempo);
+                      }
+                    }
+
+                    if (playingProgressionIdx !== null) {
+                        const p = progressions[playingProgressionIdx];
+                        if (p) {
+                            triggerProgressionPlayback(p, playingProgressionIdx, val, newTempo);
+                        }
                     } else {
-                      setIsPlayingRhythm(false);
+                        if (val) {
+                          audioEngine.init().then(() => setIsPlayingRhythm(true)).catch(console.error);
+                        } else {
+                          setIsPlayingRhythm(false);
+                        }
                     }
                   }}
                   style={{ flex: 1, padding: '8px 12px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', outline: 'none' }}
