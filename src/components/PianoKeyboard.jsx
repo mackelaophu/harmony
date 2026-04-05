@@ -10,13 +10,21 @@ const PianoKeyboard = ({ activeChordNotes = [], onNotePlayed, activeMidiNotes = 
   const scrollContainerRef = useRef(null);
 
   useEffect(() => {
-     audioEngine.setNoteVisualCallback((notes) => {
-         // Some rhythms might send empty arrays or null if they play drum notes
-         if (!notes || notes.length === 0) return;
+     const FLAT_TO_SHARP = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' };
+     audioEngine.setNoteVisualCallback((notesRaw) => {
+         if (!notesRaw || notesRaw.length === 0) return;
+         
+         const notes = notesRaw.map(n => {
+             let pitch = n.replace(/[0-9]/g, '');
+             let oct = n.replace(/[^0-9]/g, '');
+             pitch = FLAT_TO_SHARP[pitch] || pitch;
+             return `${pitch}${oct}`;
+         });
+
          setPlayingNotes(prev => [...new Set([...prev, ...notes])]);
          setTimeout(() => {
              setPlayingNotes(prev => prev.filter(n => !notes.includes(n)));
-         }, 300); // 300ms flash
+         }, 300);
      });
      return () => audioEngine.setNoteVisualCallback(null);
   }, []);

@@ -74,13 +74,15 @@ class AudioEngine {
   }
 
   setPlaybackVoicing(chordNotes) {
-    if (!chordNotes || chordNotes.length < 3) return null;
+    if (!chordNotes || chordNotes.length < 2) return null;
     
+    // Normalize root and get bass
     const rootNorm = normalizeNote(chordNotes[0]);
-    const bass = `${rootNorm}2`; 
+    const bass = `${rootNorm}3`; 
     
+    // Default matching: alt bass is often the 5th (2nd note in array if triad)
     const altNorm = normalizeNote(chordNotes[chordNotes.length > 2 ? 2 : 0]);
-    const altBass = `${altNorm}2`;
+    const altBass = `${altNorm}3`;
 
     let oct = 4;
     let prevIdx = -1;
