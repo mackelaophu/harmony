@@ -25,7 +25,7 @@ class AudioEngine {
         A4: "A4.mp3",
         C5: "C5.mp3",
         "D#5": "Ds5.mp3",
-        "F#2": "Fs5.mp3",
+        "F#5": "Fs5.mp3",
         A5: "A5.mp3",
         C6: "C6.mp3",
         "D#6": "Ds6.mp3",
