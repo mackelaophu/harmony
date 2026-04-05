@@ -10,6 +10,18 @@ const PianoKeyboard = ({ activeChordNotes = [], onNotePlayed, activeMidiNotes = 
   const scrollContainerRef = useRef(null);
 
   useEffect(() => {
+     audioEngine.setNoteVisualCallback((notes) => {
+         // Some rhythms might send empty arrays or null if they play drum notes
+         if (!notes || notes.length === 0) return;
+         setPlayingNotes(prev => [...new Set([...prev, ...notes])]);
+         setTimeout(() => {
+             setPlayingNotes(prev => prev.filter(n => !notes.includes(n)));
+         }, 300); // 300ms flash
+     });
+     return () => audioEngine.setNoteVisualCallback(null);
+  }, []);
+
+  useEffect(() => {
     if (activeMidiNotes.length > 0 && scrollContainerRef.current) {
         const firstNote = activeMidiNotes[0];
         const keyElement = scrollContainerRef.current.querySelector(`[data-note="${firstNote}"]`);

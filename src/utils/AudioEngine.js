@@ -65,6 +65,12 @@ class AudioEngine {
     } else {
         this.sampler.triggerAttackRelease(notes, duration, undefined, velocity);
     }
+
+    if (this.noteVisualCallback && Tone.Draw) {
+        Tone.Draw.schedule(() => {
+            this.noteVisualCallback(Array.isArray(notes) ? notes : [notes]);
+        }, Tone.now());
+    }
   }
 
   setPlaybackVoicing(chordNotes) {
@@ -101,6 +107,10 @@ class AudioEngine {
     }
   }
 
+  setNoteVisualCallback(callback) {
+      this.noteVisualCallback = callback;
+  }
+
   playRhythmStyle(styleId, chordNotes, currentTempo) {
     if (!this.initialized) return;
     this.stopRhythm();
@@ -125,6 +135,12 @@ class AudioEngine {
             notesToPlay.forEach(n => this.sampler.triggerAttackRelease(n, duration, time, velocity));
         } else {
             this.sampler.triggerAttackRelease(notesToPlay, duration, time, velocity);
+        }
+        
+        if (this.noteVisualCallback) {
+            Tone.Draw.schedule(() => {
+                this.noteVisualCallback(Array.isArray(notesToPlay) ? notesToPlay : [notesToPlay]);
+            }, time);
         }
     }, styleDef.seq).start(0);
     
@@ -151,6 +167,12 @@ class AudioEngine {
                 event.voicing.chord.forEach(n => {
                     this.sampler.triggerAttackRelease(n, '1m', time + 0.03, 0.65);
                 });
+                
+                if (this.noteVisualCallback) {
+                    Tone.Draw.schedule(() => {
+                        this.noteVisualCallback([event.voicing.bass, ...event.voicing.chord]);
+                    }, time);
+                }
             }
         }, events).start(0);
     } else {
@@ -179,6 +201,12 @@ class AudioEngine {
                 notesToPlay.forEach(n => this.sampler.triggerAttackRelease(n, duration, time, velocity));
             } else {
                 this.sampler.triggerAttackRelease(notesToPlay, duration, time, velocity);
+            }
+            
+            if (this.noteVisualCallback) {
+                Tone.Draw.schedule(() => {
+                    this.noteVisualCallback(Array.isArray(notesToPlay) ? notesToPlay : [notesToPlay]);
+                }, time);
             }
         }, allEvents).start(0);
     }
