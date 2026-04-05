@@ -268,6 +268,8 @@ body {
   right: 24px;
   top: 24px;
   width: 340px;
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
   background: var(--bg-card);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
@@ -276,6 +278,10 @@ body {
   box-shadow: 0 20px 50px rgba(0,0,0,0.5);
   z-index: 100;
 }
+
+.chord-info-panel::-webkit-scrollbar { width: 6px; }
+.chord-info-panel::-webkit-scrollbar-track { background: transparent; }
+.chord-info-panel::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
 
 .chord-details .detail-item {
   display: flex;

@@ -1,6 +1,6 @@
 import * as Tone from 'tone';
 import { RHYTHM_STYLES } from './RhythmLibrary';
-import { normalizeNote } from './MusicTheory';
+import { normalizeNote, NOTES_FLAT } from './MusicTheory';
 
 class AudioEngine {
   constructor() {
@@ -60,12 +60,15 @@ class AudioEngine {
 
   playChord(notes, duration = '2n', velocity = 0.7) {
     if (!this.initialized) return;
-    this.sampler.triggerAttackRelease(notes, duration, undefined, velocity);
+    if (Array.isArray(notes)) {
+        notes.forEach(n => this.sampler.triggerAttackRelease(n, duration, undefined, velocity));
+    } else {
+        this.sampler.triggerAttackRelease(notes, duration, undefined, velocity);
+    }
   }
 
   setPlaybackVoicing(chordNotes) {
     if (!chordNotes || chordNotes.length < 3) return null;
-    const FLAT_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
     
     const rootNorm = normalizeNote(chordNotes[0]);
     const bass = `${rootNorm}2`; 
@@ -77,7 +80,7 @@ class AudioEngine {
     let prevIdx = -1;
     const voiced = chordNotes.map(n => {
         const norm = normalizeNote(n);
-        const idx = FLAT_NOTES.indexOf(norm);
+        const idx = NOTES_FLAT.indexOf(norm);
         if (idx < prevIdx && prevIdx !== -1) oct++;
         prevIdx = idx;
         return `${norm}${oct}`;
@@ -112,11 +115,78 @@ class AudioEngine {
         let notesToPlay = voicing[event.type]; 
         if (!notesToPlay) return;
         
-        this.sampler.triggerAttackRelease(notesToPlay, duration, time, velocity);
+        if (Array.isArray(notesToPlay)) {
+            notesToPlay.forEach(n => this.sampler.triggerAttackRelease(n, duration, time, velocity));
+        } else {
+            this.sampler.triggerAttackRelease(notesToPlay, duration, time, velocity);
+        }
     }, styleDef.seq).start(0);
     
     this.currentPart.loop = true;
     this.currentPart.loopEnd = '1m'; 
+    Tone.Transport.start();
+  }
+
+  playProgressionSequence(contexts, activeRhythm, onChordUIUpdate) {
+    if (!this.initialized) return;
+    this.stopRhythm();
+    
+    const styleDef = activeRhythm ? RHYTHM_STYLES[activeRhythm] : null;
+    Tone.Transport.bpm.value = styleDef ? styleDef.defaultBpm : 100;
+    if (styleDef) Tone.Transport.timeSignature = styleDef.timeSignature;
+    
+    const voicings = contexts.map(ctx => this.setPlaybackVoicing(ctx.notes));
+
+    if (!styleDef) {
+        const events = contexts.map((ctx, idx) => ({ time: `${idx}m`, voicing: voicings[idx] }));
+        this.currentPart = new Tone.Part((time, event) => {
+            if (event.voicing) {
+                this.sampler.triggerAttackRelease(event.voicing.bass, '1m', time, 0.85);
+                event.voicing.chord.forEach(n => {
+                    this.sampler.triggerAttackRelease(n, '1m', time + 0.03, 0.65);
+                });
+            }
+        }, events).start(0);
+    } else {
+        const allEvents = [];
+        voicings.forEach((voicing, measureIdx) => {
+             if (!voicing) return;
+             styleDef.seq.forEach(seqEvent => {
+                 const timeParts = seqEvent.time.split(':');
+                 const absTime = `${parseInt(timeParts[0]) + measureIdx}:${timeParts[1]}:${timeParts[2]}`;
+                 allEvents.push({
+                     time: absTime,
+                     type: seqEvent.type,
+                     duration: seqEvent.duration,
+                     voicing: voicing
+                 });
+             });
+        });
+        
+        this.currentPart = new Tone.Part((time, event) => {
+            let duration = event.duration || '8n';
+            let velocity = event.type.includes('bass') ? 0.9 : 0.6; 
+            let notesToPlay = event.voicing[event.type]; 
+            if (!notesToPlay) return;
+            
+            if (Array.isArray(notesToPlay)) {
+                notesToPlay.forEach(n => this.sampler.triggerAttackRelease(n, duration, time, velocity));
+            } else {
+                this.sampler.triggerAttackRelease(notesToPlay, duration, time, velocity);
+            }
+        }, allEvents).start(0);
+    }
+    
+    if (onChordUIUpdate) {
+        const uiEvents = contexts.map((ctx, idx) => ({ time: `${idx}m`, notes: ctx.notes }));
+        this.uiPart = new Tone.Part((time, event) => {
+            Tone.Draw.schedule(() => {
+                onChordUIUpdate(event.notes);
+            }, time);
+        }, uiEvents).start(0);
+    }
+    
+    this.currentPart.loop = false;
     Tone.Transport.start();
   }
 
@@ -125,6 +195,11 @@ class AudioEngine {
         this.currentPart.stop();
         this.currentPart.dispose();
         this.currentPart = null;
+    }
+    if (this.uiPart) {
+        this.uiPart.stop();
+        this.uiPart.dispose();
+        this.uiPart = null;
     }
     Tone.Transport.stop();
   }

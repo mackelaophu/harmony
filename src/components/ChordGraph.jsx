@@ -30,6 +30,11 @@ const RINGS = [
   { type: 'add9', items: ADD9, r: 920 }
 ];
 
+const GRAPH_SIZE = 2000;
+const GRAPH_CENTER_X = 1000;
+const GRAPH_CENTER_Y = 1000;
+const BASE_NODE_RADIUS = 32;
+
 const ChordGraph = ({ onChordSelect, showExtended = true }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [activeNode, setActiveNode] = useState(null);
@@ -39,13 +44,9 @@ const ChordGraph = ({ onChordSelect, showExtended = true }) => {
   useEffect(() => {
      if (scrollRef.current) {
         const el = scrollRef.current;
-        el.scrollTo({ left: 1000 - el.clientWidth / 2, top: 1000 - el.clientHeight / 2 });
+        el.scrollTo({ left: GRAPH_CENTER_X - el.clientWidth / 2, top: GRAPH_CENTER_Y - el.clientHeight / 2 });
      }
   }, []);
-
-  const cx = 1000;
-  const cy = 1000;
-  const NODE_RADIUS = 32;
 
   const visibleRings = useMemo(() => {
      let filtered = RINGS;
@@ -71,8 +72,8 @@ const ChordGraph = ({ onChordSelect, showExtended = true }) => {
                key: `${ring.type}_${i}`,
                id: ring.items[i],
                type: ring.type,
-               x: cx + ring.dynamicRadius * Math.cos(baseAngle),
-               y: cy + ring.dynamicRadius * Math.sin(baseAngle),
+               x: GRAPH_CENTER_X + ring.dynamicRadius * Math.cos(baseAngle),
+               y: GRAPH_CENTER_Y + ring.dynamicRadius * Math.sin(baseAngle),
                notes: context.notes,
                context: context
             });
@@ -104,7 +105,6 @@ const ChordGraph = ({ onChordSelect, showExtended = true }) => {
         // Wait: major is ring 4 (even, 0 offset). minor is ring 3 (odd, 15 offset). 
         // We already connect them in the consecutive ring loop!
         
-        // Diminished to center
         all.push({ source: `dim_${i}`, target: 'center', type: 'uni' });
     }
     return all;
@@ -133,7 +133,7 @@ const ChordGraph = ({ onChordSelect, showExtended = true }) => {
            cursor: 'grab' // Indicate draggable (though we just use scroll bars for now)
        }}
     >
-      <svg viewBox="0 0 2000 2000" style={{ width: '2000px', height: '2000px', flexShrink: 0, minWidth: '2000px' }}>
+      <svg viewBox={`0 0 ${GRAPH_SIZE} ${GRAPH_SIZE}`} style={{ width: `${GRAPH_SIZE}px`, height: `${GRAPH_SIZE}px`, flexShrink: 0, minWidth: `${GRAPH_SIZE}px` }}>
         <defs>
           <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,0.2)"/>
@@ -144,7 +144,7 @@ const ChordGraph = ({ onChordSelect, showExtended = true }) => {
         </defs>
 
         {/* Draw Center Point */}
-        <circle cx={cx} cy={cy} r={NODE_RADIUS / 2} fill="#fbbf24" opacity="0.3" />
+        <circle cx={GRAPH_CENTER_X} cy={GRAPH_CENTER_Y} r={BASE_NODE_RADIUS / 2} fill="#fbbf24" opacity="0.3" />
 
         {/* Links */}
         <g opacity="0.5">
@@ -153,7 +153,7 @@ const ChordGraph = ({ onChordSelect, showExtended = true }) => {
             let targetX, targetY;
             
             if (link.target === 'center') {
-                targetX = cx; targetY = cy;
+                targetX = GRAPH_CENTER_X; targetY = GRAPH_CENTER_Y;
             } else {
                 const t = nodes.find(n => n.key === link.target);
                 if (!s || !t) return null;
@@ -165,8 +165,8 @@ const ChordGraph = ({ onChordSelect, showExtended = true }) => {
             const dy = targetY - s.y;
             const dist = Math.sqrt(dx*dx + dy*dy);
             const isCenter = link.target === 'center';
-            const sOffset = NODE_RADIUS + 4;
-            const tOffset = isCenter ? 15 : NODE_RADIUS + 4;
+            const sOffset = BASE_NODE_RADIUS + 4;
+            const tOffset = isCenter ? 15 : BASE_NODE_RADIUS + 4;
             
             const startX = s.x + (dx/dist)*sOffset;
             const startY = s.y + (dy/dist)*sOffset;
@@ -220,7 +220,7 @@ const ChordGraph = ({ onChordSelect, showExtended = true }) => {
                 <circle 
                   cx={node.x} 
                   cy={node.y} 
-                  r={isTarget ? NODE_RADIUS + 6 : NODE_RADIUS} 
+                  r={isTarget ? BASE_NODE_RADIUS + 6 : BASE_NODE_RADIUS} 
                   fill="#05070a" 
                   stroke={TYPE_COLORS[node.type]} 
                   strokeWidth={isTarget ? "4" : "3"} 

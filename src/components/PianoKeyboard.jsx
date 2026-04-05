@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { audioEngine } from '../utils/AudioEngine';
-import { normalizeNote } from '../utils/MusicTheory';
+import { normalizeNote, NOTES_SHARP as PITCH_CLASSES } from '../utils/MusicTheory';
 
-const PITCH_CLASSES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
 
 const PianoKeyboard = ({ activeChordNotes = [], onNotePlayed, activeMidiNotes = [] }) => {
   const [playingNotes, setPlayingNotes] = useState([]);
@@ -22,14 +22,14 @@ const PianoKeyboard = ({ activeChordNotes = [], onNotePlayed, activeMidiNotes = 
   }, [activeMidiNotes]);
 
   // Initial scroll to C2 on load
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (scrollContainerRef.current) {
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         const c2Element = scrollContainerRef.current.querySelector('[data-note="C2"]');
         if (c2Element) {
             scrollContainerRef.current.scrollTo({ left: c2Element.offsetLeft, behavior: 'auto' });
         }
-      }, 100); // small delay to ensure DOM is fully rendered
+      });
     }
   }, []);
 
@@ -43,12 +43,13 @@ const PianoKeyboard = ({ activeChordNotes = [], onNotePlayed, activeMidiNotes = 
     };
 
     const notes = [];
-    const rootSharp = getSharp(activeChordNotes[0]);
+    const rootSharp = getSharp(activeChordNotes[0].replace(/[0-9]/g, ''));
     let currentOctave = 4; // Default starting octave for voicings
     let prevIndex = PITCH_CLASSES.indexOf(rootSharp);
     
     activeChordNotes.forEach((n) => {
-        const sharp = getSharp(n);
+        const sharpWithOctave = getSharp(n); // may contain octave
+        const sharp = sharpWithOctave.replace(/[0-9]/g, ''); // strip octave for index comparison
         const idx = PITCH_CLASSES.indexOf(sharp);
         if (idx < prevIndex && prevIndex !== -1) {
             currentOctave++;

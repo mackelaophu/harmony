@@ -25,8 +25,8 @@ const ENHARMONIC_MAP = {
   'Fb': 'E'
 };
 
-const NOTES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-const NOTES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+export const NOTES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+export const NOTES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 export const normalizeNote = (n) => {
   return ENHARMONIC_MAP[n] || n;
@@ -126,6 +126,66 @@ export const getChordContext = (id, type) => {
   }
   
   return { id, type, notes, details };
+};
+
+export const getPopularProgressions = (id, type) => {
+    let rootNorm = normalizeNote(id.replace(/m7b5|maj7|sus4|sus2|add9|m7|°7|°|m|7/g, ''));
+    let circleIdx = MAJOR.indexOf(rootNorm);
+    if (circleIdx === -1) {
+        circleIdx = MAJOR.findIndex(m => normalizeNote(m) === rootNorm);
+        if (circleIdx === -1) return [];
+    }
+
+    const getMaj = i => MAJOR[(i + 12) % 12];
+    const getMin = i => MINOR[(i + 12) % 12];
+    const getDomForMajor = i => DOM_MAJOR[(i + 12) % 12];
+    const getMaj7 = i => MAJ7[(i + 12) % 12];
+    const getMin7 = i => MIN7[(i + 12) % 12];
+    const getM7b5ForMinor = i => M7B5[(i + 12) % 12];
+    const getDomForMinor = i => DOM_MINOR[(i + 12) % 12];
+
+    if (type === 'major') {
+        const I = getMaj(circleIdx);
+        const Imaj7 = getMaj7(circleIdx);
+        const IV = getMaj(circleIdx + 11);
+        const V = getMaj(circleIdx + 1);
+        const V7 = getDomForMajor(circleIdx);
+        
+        const ii = getMin(circleIdx + 11);
+        const ii7 = getMin7(circleIdx + 11);
+        const iii = getMin(circleIdx + 1);
+        const vi = getMin(circleIdx);
+        
+        return [
+            { name: "Kinh điển (I - V - vi - IV)", chords: [I, V, vi, IV] },
+            { name: "Nhạy cảm (vi - IV - I - V)", chords: [vi, IV, I, V] },
+            { name: "Thập niên 50 (I - vi - IV - V)", chords: [I, vi, IV, V] },
+            { name: "Plagal (I - IV - I - V)", chords: [I, IV, I, V] },
+            { name: "Pachelbel's Canon (I - V - vi - iii - IV - I - IV - V)", chords: [I, V, vi, iii, IV, I, IV, V] },
+            { name: "Standard Jazz (ii7 - V7 - Imaj7)", chords: [ii7, V7, Imaj7] },
+            { name: "Circle of 5ths (iii - vi - ii - V - I)", chords: [iii, vi, ii, V, I] },
+            { name: "Jazz Turnaround (I - vi - ii - V)", chords: [I, vi, ii, V] },
+            { name: "Blues 12-Bar (I - IV - V)", chords: [I, I, I, I, IV, IV, I, I, V, IV, I, V] }
+        ];
+    } else if (type === 'minor') {
+        const i_chord = getMin(circleIdx);
+        const iv = getMin(circleIdx + 11);
+        const v = getMin(circleIdx + 1);
+        const V7 = getDomForMinor(circleIdx); 
+        
+        const III = getMaj(circleIdx);
+        const VI = getMaj(circleIdx + 11);
+        const VII = getMaj(circleIdx + 1);
+        const iim7b5 = getM7b5ForMinor(circleIdx);
+        
+        return [
+            { name: "Andalusian Cadence (i - VII - VI - V7)", chords: [i_chord, VII, VI, V7] },
+            { name: "Minor Pop (i - VI - III - VII)", chords: [i_chord, VI, III, VII] },
+            { name: "Minor Pop 2 (i - iv - v - i)", chords: [i_chord, iv, v, i_chord] },
+            { name: "Minor 2-5-1 (ii° - V7 - i)", chords: [iim7b5, V7, i_chord] }
+        ];
+    }
+    return [];
 };
 
 export const inferChordsFromNotes = (playedNotes) => {

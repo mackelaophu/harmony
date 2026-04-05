@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Music, Settings, Info, X, Play, Square, Cable } from 'lucide-react';
 import ChordGraph from './components/ChordGraph';
 import PianoKeyboard from './components/PianoKeyboard';
 import RecordingStudio from './components/RecordingStudio';
 import { audioEngine } from './utils/AudioEngine';
 import { midiEngine } from './utils/MidiEngine';
-import { normalizeNote } from './utils/MusicTheory';
+import { normalizeNote, getPopularProgressions, getChordContext } from './utils/MusicTheory';
 import { RHYTHM_STYLES } from './utils/RhythmLibrary';
 import './index.css';
 
@@ -27,6 +27,63 @@ function App() {
 
   const isRecordingRef = useRef(isRecording);
   const isPausedRef = useRef(isPaused);
+  
+  // Progressions
+  const [playingProgressionIdx, setPlayingProgressionIdx] = useState(null);
+  const [activeProgressionNotes, setActiveProgressionNotes] = useState(null);
+  const progressionTimeoutRef = useRef(null);
+
+  const progressions = useMemo(() => {
+     if (!selectedChord) return [];
+     return getPopularProgressions(selectedChord.id, selectedChord.type);
+  }, [selectedChord]);
+
+  const handlePlayProgression = async (progression, idx) => {
+      if (playingProgressionIdx === idx) {
+          audioEngine.stopRhythm();
+          setPlayingProgressionIdx(null);
+          setActiveProgressionNotes(null);
+          if (progressionTimeoutRef.current) clearTimeout(progressionTimeoutRef.current);
+          return;
+      }
+      setPlayingProgressionIdx(idx);
+      if (progressionTimeoutRef.current) clearTimeout(progressionTimeoutRef.current);
+      
+      try {
+         await audioEngine.init();
+         const getTypeByString = (idString) => {
+            if (idString.includes('m7b5')) return 'm7b5';
+            if (idString.includes('m7')) return 'min7';
+            if (idString.includes('maj7')) return 'maj7';
+            if (idString.includes('sus4')) return 'sus4';
+            if (idString.includes('sus2')) return 'sus2';
+            if (idString.includes('add9')) return 'add9';
+            if (idString.includes('°7')) return 'dim7';
+            if (idString.includes('°')) return 'dim';
+            if (idString.includes('7')) return 'dom7';
+            if (idString.includes('m')) return 'minor';
+            return 'major';
+         };
+         const contexts = progression.chords.map(c => getChordContext(c, getTypeByString(c)));
+         setIsPlayingRhythm(false);
+         audioEngine.playProgressionSequence(contexts, activeRhythm, setActiveProgressionNotes);
+         
+         const styleDef = activeRhythm ? RHYTHM_STYLES[activeRhythm] : null;
+         const bpm = styleDef ? styleDef.defaultBpm : 100;
+         const beatsPerBar = styleDef ? styleDef.timeSignature : 4;
+         const msPerMeasure = (60 / bpm) * beatsPerBar * 1000;
+         const totalMs = progression.chords.length * msPerMeasure;
+
+         progressionTimeoutRef.current = setTimeout(() => {
+             setPlayingProgressionIdx(null);
+             setActiveProgressionNotes(null);
+         }, totalMs + 500); // 500ms safety tail
+      } catch (e) {
+         console.error(e);
+         setPlayingProgressionIdx(null);
+         setActiveProgressionNotes(null);
+      }
+  };
 
   useEffect(() => {
     isRecordingRef.current = isRecording;
@@ -53,7 +110,7 @@ function App() {
         }).catch(console.error);
 
         if (isRecordingRef.current && !isPausedRef.current) {
-             setRecordedNotes(prev => [...prev, note]);
+             setRecordedNotes(prev => prev.concat(note));
         }
     };
     
@@ -75,20 +132,26 @@ function App() {
   };
 
   useEffect(() => {
+    let isActive = true;
     const play = async () => {
       try {
         if (isPlayingRhythm && activeRhythm && selectedChord) {
            await audioEngine.init();
-           audioEngine.playRhythmStyle(activeRhythm, selectedChord.notes);
+           if (isActive) {
+               audioEngine.playRhythmStyle(activeRhythm, selectedChord.notes);
+           }
         } else {
-           audioEngine.stopRhythm();
+           if (playingProgressionIdx === null) {
+               audioEngine.stopRhythm();
+           }
         }
       } catch (e) {
         console.error('Tone Transport Error:', e);
       }
     };
     play();
-  }, [isPlayingRhythm, activeRhythm, selectedChord]);
+    return () => { isActive = false; };
+  }, [isPlayingRhythm, activeRhythm, selectedChord, playingProgressionIdx]);
 
   return (
     <div className="app-container">
@@ -145,9 +208,32 @@ function App() {
           onPause={() => setIsPaused(true)}
           onResume={() => setIsPaused(false)}
           onStop={() => { setIsRecording(false); setIsPaused(false); setRecordedNotes([]); }}
-          onChordSelect={(chord) => setSelectedChord(chord)}
+          onChordSelect={(chord) => {
+             setSelectedChord(chord);
+             if (chord && chord.notes) {
+                 audioEngine.init().then(() => {
+                     const voicing = audioEngine.setPlaybackVoicing(chord.notes);
+                     if (voicing && !isPlayingRhythm && playingProgressionIdx === null) {
+                         audioEngine.playChord([voicing.bass, ...voicing.chord], '1m', 0.85);
+                     }
+                 });
+             }
+          }}
         />
-        <ChordGraph onChordSelect={(chord) => setSelectedChord(chord)} showExtended={showExtendedChords} />
+        <ChordGraph 
+          onChordSelect={(chord) => {
+             setSelectedChord(chord);
+             if (chord && chord.notes) {
+                 audioEngine.init().then(() => {
+                     const voicing = audioEngine.setPlaybackVoicing(chord.notes);
+                     if (voicing && !isPlayingRhythm && playingProgressionIdx === null) {
+                         audioEngine.playChord([voicing.bass, ...voicing.chord], '1m', 0.85);
+                     }
+                 });
+             }
+          }} 
+          showExtended={showExtendedChords} 
+        />
         
         {/* Chord Info Panel */}
         {selectedChord && (
@@ -230,6 +316,28 @@ function App() {
                 )}
               </div>
             </div>
+            
+            {progressions.length > 0 && (
+              <div className="progressions-panel" style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+                <div style={{ fontSize: '10px', opacity: 0.6, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.1em' }}>Gợi ý Vòng hoà thanh</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {progressions.map((p, idx) => (
+                     <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.05)', padding: '8px 12px', borderRadius: '8px' }}>
+                         <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', fontWeight: 'bold' }}>{p.name.split(' (')[0]}</span>
+                            <span style={{ fontSize: '11px', color: '#38bdf8', fontFamily: 'monospace' }}>{p.chords.join(' → ')}</span>
+                         </div>
+                         <button 
+                            onClick={() => handlePlayProgression(p, idx)}
+                            style={{ padding: '6px 12px', backgroundColor: playingProgressionIdx === idx ? '#ef4444' : '#38bdf8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold' }}>
+                            {playingProgressionIdx === idx ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
+                            {playingProgressionIdx === idx ? 'Dừng' : 'Chơi'}
+                         </button>
+                     </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -237,7 +345,7 @@ function App() {
       {/* Footer / Piano */}
       <footer className="piano-footer">
         <div className="footer-panel" style={{ width: '100%', maxWidth: '100vw', minWidth: 0, display: 'flex', justifyContent: 'flex-start' }}>
-          <PianoKeyboard activeChordNotes={selectedChord?.notes || []} activeMidiNotes={activeMidiNotes} onNotePlayed={handleNotePlayed} />
+          <PianoKeyboard activeChordNotes={activeProgressionNotes || selectedChord?.notes || []} activeMidiNotes={activeMidiNotes} onNotePlayed={handleNotePlayed} />
         </div>
       </footer>
     </div>

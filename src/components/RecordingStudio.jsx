@@ -73,6 +73,7 @@ const RecordingStudio = ({ recordedNotes, isRecording, isPaused, onStart, onPaus
                        let pct = Math.round((s.score / 2.5) * 100);
                        if (pct > 100) pct = 100;
                        
+                       if (!s || !s.chord) return null;
                        return (
                            <div key={idx} className="suggestion-item" onClick={() => onChordSelect(s.chord)} style={{ borderLeftColor: TYPE_COLORS[s.chord.type] }}>
                                <div className="chord-name" style={{ color: TYPE_COLORS[s.chord.type] }}>{s.chord.id}</div>
