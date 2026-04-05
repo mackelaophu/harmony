@@ -335,6 +335,12 @@ function App() {
                 ) : (
                    <button onClick={() => { 
                       if(activeRhythm) {
+                         if (playingProgressionIdx !== null) {
+                             audioEngine.stopRhythm();
+                             setPlayingProgressionIdx(null);
+                             setActiveProgressionNotes(null);
+                             if (progressionTimeoutRef.current) clearTimeout(progressionTimeoutRef.current);
+                         }
                          audioEngine.init().then(() => setIsPlayingRhythm(true)).catch(console.error);
                       } 
                    }} style={{ padding: '8px 16px', backgroundColor: '#38bdf8', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: activeRhythm ? 1 : 0.5 }}>
