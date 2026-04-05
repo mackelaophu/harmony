@@ -6,7 +6,14 @@ const TYPE_COLORS = {
   major: 'var(--color-major)',
   minor: 'var(--color-minor)',
   dom7: 'var(--color-dom7)',
-  dim: 'var(--color-dim)'
+  dim: 'var(--color-dim)',
+  maj7: 'var(--color-maj7)',
+  min7: 'var(--color-min7)',
+  sus4: 'var(--color-sus4)',
+  sus2: 'var(--color-sus2)',
+  add9: 'var(--color-add9)',
+  dim7: 'var(--color-dim7)',
+  m7b5: 'var(--color-m7b5)'
 };
 
 const RecordingStudio = ({ recordedNotes, isRecording, isPaused, onStart, onPause, onResume, onStop, onChordSelect }) => {

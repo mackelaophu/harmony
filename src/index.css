@@ -15,6 +15,14 @@
   --color-dom7: #fbbf24;  /* Amber 400 */
   --color-dim: #d946ef;   /* Fuchsia 500 */
   
+  --color-maj7: #10b981;  /* Emerald 500 */
+  --color-min7: #3b82f6;  /* Blue 500 */
+  --color-sus4: #f97316;  /* Orange 500 */
+  --color-sus2: #f59e0b;  /* Amber 500 */
+  --color-add9: #8b5cf6;  /* Violet 500 */
+  --color-dim7: #ec4899;  /* Pink 500 */
+  --color-m7b5: #6366f1;  /* Indigo 500 */
+  
   --bg-dark: #05070a;
   --bg-card: rgba(17, 24, 39, 0.8);
   --border-color: rgba(255, 255, 255, 0.1);

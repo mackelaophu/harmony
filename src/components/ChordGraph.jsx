@@ -1,107 +1,99 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { audioEngine } from '../utils/AudioEngine';
-import { MAJOR, MINOR, DOM_MAJOR, DOM_MINOR, DIMINISHED, getChordContext } from '../utils/MusicTheory';
+import { MAJOR, MINOR, DOM_MAJOR, DOM_MINOR, DIMINISHED, MAJ7, MIN7, SUS4, SUS2, ADD9, DIM7, M7B5, getChordContext } from '../utils/MusicTheory';
 
 const TYPE_COLORS = {
   major: 'var(--color-major)',
   minor: 'var(--color-minor)',
   dom7: 'var(--color-dom7)',
-  dim: 'var(--color-dim)'
+  dim: 'var(--color-dim)',
+  maj7: 'var(--color-maj7)',
+  min7: 'var(--color-min7)',
+  sus4: 'var(--color-sus4)',
+  sus2: 'var(--color-sus2)',
+  add9: 'var(--color-add9)',
+  dim7: 'var(--color-dim7)',
+  m7b5: 'var(--color-m7b5)'
 };
+
+const RINGS = [
+  { type: 'dim', items: DIMINISHED, r: 120 },
+  { type: 'm7b5', items: M7B5, r: 200 },
+  { type: 'dim7', items: DIM7, r: 280 },
+  { type: 'minor', items: MINOR, r: 360 },
+  { type: 'major', items: MAJOR, r: 440 },
+  { type: 'sus2', items: SUS2, r: 520 },
+  { type: 'sus4', items: SUS4, r: 600 },
+  { type: 'dom7', items: DOM_MAJOR, r: 680 },
+  { type: 'min7', items: MIN7, r: 760 },
+  { type: 'maj7', items: MAJ7, r: 840 },
+  { type: 'add9', items: ADD9, r: 920 }
+];
 
 const ChordGraph = ({ onChordSelect }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [activeNode, setActiveNode] = useState(null);
+  const scrollRef = useRef(null);
 
-  const cx = 500;
-  const cy = 500;
-  
-  // Adjusted radii for the dense Tonnetz look
-  const R_MAJOR = 420;
-  const R_MINOR = 340;
-  const R_DOM = 260;
-  const R_DIM = 140;
-  const NODE_RADIUS = 30;
+  // Center the scroll automatically on mount
+  useEffect(() => {
+     if (scrollRef.current) {
+        const el = scrollRef.current;
+        el.scrollTo({ left: 1000 - el.clientWidth / 2, top: 1000 - el.clientHeight / 2 });
+     }
+  }, []);
+
+  const cx = 1000;
+  const cy = 1000;
+  const NODE_RADIUS = 32;
 
   const nodes = useMemo(() => {
     const all = [];
-    for (let i = 0; i < 12; i++) {
-      const baseAngle = (i / 12) * Math.PI * 2 - Math.PI / 2;
-      const offset15 = (15 / 180) * Math.PI;
-      const offset7_5 = (7.5 / 180) * Math.PI;
+    RINGS.forEach((ring, ringIdx) => {
+        for (let i = 0; i < 12; i++) {
+            // Alternate rotation for adjacent rings to create a spider web aesthetic
+            const angleOffset = (ringIdx % 2 === 0 ? 0 : 15) * (Math.PI / 180); 
+            const baseAngle = (i / 12) * Math.PI * 2 - Math.PI / 2 + angleOffset;
+            
+            const context = getChordContext(ring.items[i], ring.type);
+            all.push({
+               key: `${ring.type}_${i}`,
+               id: ring.items[i],
+               type: ring.type,
+               x: cx + ring.r * Math.cos(baseAngle),
+               y: cy + ring.r * Math.sin(baseAngle),
+               notes: context.notes,
+               context: context
+            });
+        }
+    });
 
-      // 1. Major Ring (Outer)
-      const cMaj = getChordContext(MAJOR[i], 'major');
-      all.push({ 
-        key: `maj_${i}`, id: MAJOR[i], type: 'major', 
-        x: cx + R_MAJOR * Math.cos(baseAngle), 
-        y: cy + R_MAJOR * Math.sin(baseAngle), 
-        notes: cMaj.notes, context: cMaj 
-      });
-      
-      // 2. Minor Ring (Interleaved Outer)
-      const minorAngle = baseAngle + offset15;
-      const cMin = getChordContext(MINOR[i], 'minor');
-      all.push({ 
-        key: `min_${i}`, id: MINOR[i], type: 'minor', 
-        x: cx + R_MINOR * Math.cos(minorAngle), 
-        y: cy + R_MINOR * Math.sin(minorAngle), 
-        notes: cMin.notes, context: cMin 
-      });
-      
-      // 3. Dom7 for Major (Yellow Ring)
-      const domMajAngle = baseAngle - offset7_5;
-      const cDomMaj = getChordContext(DOM_MAJOR[i], 'dom7');
-      all.push({ 
-        key: `domMaj_${i}`, id: DOM_MAJOR[i], type: 'dom7', 
-        x: cx + R_DOM * Math.cos(domMajAngle), 
-        y: cy + R_DOM * Math.sin(domMajAngle), 
-        notes: cDomMaj.notes, context: cDomMaj 
-      });
-      
-      // 4. Dom7 for Minor (Yellow Ring)
-      const domMinAngle = minorAngle - offset7_5;
-      const cDomMin = getChordContext(DOM_MINOR[i], 'dom7');
-      all.push({ 
-        key: `domMin_${i}`, id: DOM_MINOR[i], type: 'dom7', 
-        x: cx + R_DOM * Math.cos(domMinAngle), 
-        y: cy + R_DOM * Math.sin(domMinAngle), 
-        notes: cDomMin.notes, context: cDomMin 
-      });
-      
-      // 5. Diminished (Inner Star)
-      const cDim = getChordContext(DIMINISHED[i], 'dim');
-      all.push({ 
-        key: `dim_${i}`, id: DIMINISHED[i], type: 'dim', 
-        x: cx + R_DIM * Math.cos(baseAngle), 
-        y: cy + R_DIM * Math.sin(baseAngle), 
-        notes: cDim.notes, context: cDim 
-      });
-    }
     return all;
   }, []);
 
   const links = useMemo(() => {
     const all = [];
     for (let i = 0; i < 12; i++) {
-        const nextI = (i + 1) % 12; // Direction of fifths resolving G -> C (idx 1 -> idx 0).
+        const nextI = (i + 1) % 12; // Direction of fifths resolving G -> C
         
-        // C <-> Am (Relative)
-        all.push({ source: `maj_${i}`, target: `min_${i}`, type: 'bidir' });
+        // Connect consecutive rings
+        for (let r = 0; r < RINGS.length - 1; r++) {
+            // Because odd rings are offset by 15deg, the path isn't perfectly straight, 
+            // It makes a zig-zag radial outward pattern.
+            all.push({ source: `${RINGS[r].type}_${i}`, target: `${RINGS[r+1].type}_${i}`, type: 'uni' });
+        }
         
-        // Circle of Fifths (Outer borders)
-        all.push({ source: `maj_${nextI}`, target: `maj_${i}`, type: 'uni' }); // G -> C
-        all.push({ source: `min_${nextI}`, target: `min_${i}`, type: 'uni' }); // Em -> Am
-  
-        // Dominant Resolutions
-        all.push({ source: `domMaj_${i}`, target: `maj_${i}`, type: 'uni' }); // G7 -> C
-        all.push({ source: `domMin_${i}`, target: `min_${i}`, type: 'uni' }); // E7 -> Am
+        // Circle of fifths across the major ring
+        all.push({ source: `major_${nextI}`, target: `major_${i}`, type: 'uni' });
+        // Circle of fifths across the minor ring
+        all.push({ source: `minor_${nextI}`, target: `minor_${i}`, type: 'uni' });
         
-        // Diminished Resolutions
-        all.push({ source: `dim_${i}`, target: `maj_${i}`, type: 'uni' }); // B° -> C
-        all.push({ source: `dim_${i}`, target: `min_${i}`, type: 'uni' }); // B° -> Am
+        // Major to Minor relative (cross link, but since they are adjacent rings, maybe not needed, 
+        // but let's connect them directly because they share identical angle due to my alternating trick?
+        // Wait: major is ring 4 (even, 0 offset). minor is ring 3 (odd, 15 offset). 
+        // We already connect them in the consecutive ring loop!
         
-        // Central star lines (from Dim to center)
+        // Diminished to center
         all.push({ source: `dim_${i}`, target: 'center', type: 'uni' });
     }
     return all;
@@ -111,48 +103,37 @@ const ChordGraph = ({ onChordSelect }) => {
     setActiveNode(node.key);
     if (onChordSelect) onChordSelect(node.context);
     
-    // Call Audio Engine directly without setTimeout, but separated in an async wrapper
-    // so it doesn't block the UI sync state in case of failure.
-    const playAudio = async () => {
-        try {
-            await audioEngine.init();
-            audioEngine.playChord(node.notes);
-        } catch (error) {
-            console.warn('Audio Context failed to start', error);
-        }
-    };
-    playAudio();
+    // Call Audio Engine safely
+    audioEngine.init().then(() => {
+        audioEngine.playChord(node.notes);
+    }).catch(console.error);
   };
 
   return (
-    <div className="chord-graph-container">
-      <svg viewBox="0 0 1000 1000" style={{ width: '100%', height: '100%', maxHeight: '800px' }}>
+    <div 
+       className="chord-graph-container" 
+       ref={scrollRef}
+       style={{ 
+           width: '100%', height: '100%', 
+           overflow: 'auto', 
+           display: 'flex', 
+           alignItems: 'flex-start', 
+           justifyContent: 'flex-start',
+           cursor: 'grab' // Indicate draggable (though we just use scroll bars for now)
+       }}
+    >
+      <svg viewBox="0 0 2000 2000" style={{ width: '2000px', height: '2000px', flexShrink: 0, minWidth: '2000px' }}>
         <defs>
           <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" opacity="0.8"/>
-          </marker>
-          <marker id="arrowhead-white" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffffff" opacity="1"/>
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,0.2)"/>
           </marker>
           <marker id="arrowhead-active" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8" opacity="1"/>
-          </marker>
-          <marker id="arrowhead-start" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" opacity="0.8"/>
-          </marker>
-          <marker id="arrowhead-start-white" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffffff" opacity="1"/>
-          </marker>
-          <marker id="arrowhead-start-active" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8" opacity="1"/>
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8"/>
           </marker>
         </defs>
 
-        {/* Draw Center Cross (Reticle) */}
-        <g stroke="#fbbf24" strokeWidth="3" opacity="0.5">
-            <line x1={cx - 15} y1={cy} x2={cx + 15} y2={cy} />
-            <line x1={cx} y1={cy - 15} x2={cx} y2={cy + 15} />
-        </g>
+        {/* Draw Center Point */}
+        <circle cx={cx} cy={cy} r={NODE_RADIUS / 2} fill="#fbbf24" opacity="0.3" />
 
         {/* Links */}
         <g opacity="0.5">
@@ -169,13 +150,12 @@ const ChordGraph = ({ onChordSelect }) => {
             }
             if (!s) return null;
 
-            // Offset endpoints to avoid drawing inside the circular node
             const dx = targetX - s.x;
             const dy = targetY - s.y;
             const dist = Math.sqrt(dx*dx + dy*dy);
             const isCenter = link.target === 'center';
             const sOffset = NODE_RADIUS + 4;
-            const tOffset = isCenter ? 20 : NODE_RADIUS + 4;
+            const tOffset = isCenter ? 15 : NODE_RADIUS + 4;
             
             const startX = s.x + (dx/dist)*sOffset;
             const startY = s.y + (dy/dist)*sOffset;
@@ -185,24 +165,20 @@ const ChordGraph = ({ onChordSelect }) => {
             const isHoveredLink = hoveredNode === link.source || hoveredNode === link.target;
             const isActiveLink = activeNode === link.source || activeNode === link.target;
             
-            let strokeColor = "#fbbf24";
-            let opacity = 0.8;
+            let strokeColor = "rgba(255,255,255,0.15)";
+            let opacity = 0.5;
             let strokeWidth = "1.5";
             let arrowEnd = "url(#arrowhead)";
-            let arrowStart = "url(#arrowhead-start)";
 
             if (isActiveLink) {
-              strokeColor = "#38bdf8"; // Bright Cyan active path
+              strokeColor = "#38bdf8"; 
               opacity = 1;
               strokeWidth = "3.5";
               arrowEnd = "url(#arrowhead-active)";
-              arrowStart = "url(#arrowhead-start-active)";
             } else if (isHoveredLink) {
               strokeColor = "#ffffff";
               opacity = 1;
               strokeWidth = "3";
-              arrowEnd = "url(#arrowhead-white)";
-              arrowStart = "url(#arrowhead-start-white)";
             }
             
             return (
@@ -213,7 +189,6 @@ const ChordGraph = ({ onChordSelect }) => {
                 strokeWidth={strokeWidth} 
                 style={{ transition: 'all 0.3s ease', opacity: opacity }}
                 markerEnd={!isCenter ? arrowEnd : ""}
-                markerStart={link.type === 'bidir' ? arrowStart : ""}
               />
             );
           })}
@@ -238,7 +213,7 @@ const ChordGraph = ({ onChordSelect }) => {
                   fill="#05070a" 
                   stroke={TYPE_COLORS[node.type]} 
                   strokeWidth={isTarget ? "4" : "3"} 
-                  style={{ transition: 'all 0.2s ease', filter: isTarget ? `drop-shadow(0 0 20px ${TYPE_COLORS[node.type]})` : 'drop-shadow(0 0 6px rgba(0,0,0,1))' }} 
+                  style={{ transition: 'all 0.2s ease', filter: isTarget ? `drop-shadow(0 0 20px ${TYPE_COLORS[node.type]})` : 'drop-shadow(0 0 6px #000)' }} 
                 />
                 <text 
                   x={node.x} 
