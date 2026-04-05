@@ -16,6 +16,7 @@ function App() {
   const [showExtendedChords, setShowExtendedChords] = useState(true);
   const [activeRhythm, setActiveRhythm] = useState('');
   const [isPlayingRhythm, setIsPlayingRhythm] = useState(false);
+  const [tempo, setTempo] = useState(100);
 
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -66,12 +67,11 @@ function App() {
          };
          const contexts = progression.chords.map(c => getChordContext(c, getTypeByString(c)));
          setIsPlayingRhythm(false);
-         audioEngine.playProgressionSequence(contexts, activeRhythm, setActiveProgressionNotes);
+         audioEngine.playProgressionSequence(contexts, activeRhythm, setActiveProgressionNotes, tempo);
          
          const styleDef = activeRhythm ? RHYTHM_STYLES[activeRhythm] : null;
-         const bpm = styleDef ? styleDef.defaultBpm : 100;
          const beatsPerBar = styleDef ? styleDef.timeSignature : 4;
-         const msPerMeasure = (60 / bpm) * beatsPerBar * 1000;
+         const msPerMeasure = (60 / tempo) * beatsPerBar * 1000;
          const totalMs = progression.chords.length * msPerMeasure;
 
          progressionTimeoutRef.current = setTimeout(() => {
@@ -138,7 +138,7 @@ function App() {
         if (isPlayingRhythm && activeRhythm && selectedChord) {
            await audioEngine.init();
            if (isActive) {
-               audioEngine.playRhythmStyle(activeRhythm, selectedChord.notes);
+               audioEngine.playRhythmStyle(activeRhythm, selectedChord.notes, tempo);
            }
         } else {
            if (playingProgressionIdx === null) {
@@ -151,7 +151,13 @@ function App() {
     };
     play();
     return () => { isActive = false; };
-  }, [isPlayingRhythm, activeRhythm, selectedChord, playingProgressionIdx]);
+  }, [isPlayingRhythm, activeRhythm, selectedChord, playingProgressionIdx, tempo]);
+
+  useEffect(() => {
+     if (audioEngine.initialized) {
+        audioEngine.setTempo(tempo);
+     }
+  }, [tempo]);
 
   return (
     <div className="app-container">
@@ -288,6 +294,8 @@ function App() {
                     const val = e.target.value;
                     setActiveRhythm(val);
                     if (val) {
+                      const def = RHYTHM_STYLES[val];
+                      if (def) setTempo(def.defaultBpm);
                       audioEngine.init().then(() => setIsPlayingRhythm(true)).catch(console.error);
                     } else {
                       setIsPlayingRhythm(false);
@@ -314,6 +322,17 @@ function App() {
                      <Play size={14} fill="currentColor" />
                    </button>
                 )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px', padding: '0 4px' }}>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', width: '40px' }}>{tempo} BPM</span>
+                <input 
+                   type="range" 
+                   min="40" 
+                   max="240" 
+                   value={tempo} 
+                   onChange={(e) => setTempo(parseInt(e.target.value))}
+                   style={{ flex: 1, accentColor: '#38bdf8' }}
+                />
               </div>
             </div>
             

@@ -95,18 +95,24 @@ class AudioEngine {
     };
   }
 
-  playRhythmStyle(styleId, chordNotes) {
+  setTempo(bpm) {
+    if (this.initialized) {
+        Tone.Transport.bpm.rampTo(bpm, 0.1);
+    }
+  }
+
+  playRhythmStyle(styleId, chordNotes, currentTempo) {
     if (!this.initialized) return;
     this.stopRhythm();
     
     const styleDef = RHYTHM_STYLES[styleId];
     if (!styleDef) return;
     
+    Tone.Transport.bpm.value = currentTempo || styleDef.defaultBpm;
+    Tone.Transport.timeSignature = styleDef.timeSignature;
+    
     const voicing = this.setPlaybackVoicing(chordNotes);
     if (!voicing) return;
-    
-    Tone.Transport.bpm.value = styleDef.defaultBpm;
-    Tone.Transport.timeSignature = styleDef.timeSignature;
     
     this.currentPart = new Tone.Part((time, event) => {
         let duration = event.duration || '8n';
@@ -127,12 +133,12 @@ class AudioEngine {
     Tone.Transport.start();
   }
 
-  playProgressionSequence(contexts, activeRhythm, onChordUIUpdate) {
+  playProgressionSequence(contexts, activeRhythm, onChordUIUpdate, currentTempo) {
     if (!this.initialized) return;
     this.stopRhythm();
     
     const styleDef = activeRhythm ? RHYTHM_STYLES[activeRhythm] : null;
-    Tone.Transport.bpm.value = styleDef ? styleDef.defaultBpm : 100;
+    Tone.Transport.bpm.value = currentTempo || (styleDef ? styleDef.defaultBpm : 100);
     if (styleDef) Tone.Transport.timeSignature = styleDef.timeSignature;
     
     const voicings = contexts.map(ctx => this.setPlaybackVoicing(ctx.notes));
