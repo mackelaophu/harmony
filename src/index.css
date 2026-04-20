@@ -357,21 +357,34 @@ body {
 .w-full { width: 100%; }
 .relative { position: relative; }
 
-/* Recording Studio */
-.recording-studio-panel {
+/* Recording Studio Wrapper */
+.studio-container {
   position: absolute;
   left: 24px;
   top: 24px;
   width: 320px;
   max-height: calc(100% - 48px);
   overflow-y: auto;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.studio-container::-webkit-scrollbar { width: 6px; }
+.studio-container::-webkit-scrollbar-track { background: transparent; }
+.studio-container::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
+
+/* Recording Studio Panel */
+.recording-studio-panel {
+  width: 100%;
+  flex-shrink: 0;
   background: var(--bg-card);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
   padding: 24px;
   border-radius: 24px;
   box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-  z-index: 100;
   display: flex;
   flex-direction: column;
   gap: 16px;

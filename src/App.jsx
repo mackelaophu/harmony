@@ -4,6 +4,7 @@ import ChordGraph from './components/ChordGraph';
 import CircleOfFifths from './components/CircleOfFifths';
 import PianoKeyboard from './components/PianoKeyboard';
 import RecordingStudio from './components/RecordingStudio';
+import CustomProgression from './components/CustomProgression';
 import ModesTable from './components/ModesTable';
 import DiatonicTable from './components/DiatonicTable';
 import SightReadingChart from './components/SightReadingChart';
@@ -188,31 +189,31 @@ function App() {
         </div>
 
         <div style={{ display: 'flex', gap: '8px', zIndex: 200, position: 'absolute', left: '50%', transform: 'translateX(-50%)', background: 'rgba(5, 7, 10, 0.6)', padding: '6px', borderRadius: '100px', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)' }}>
-          <button 
+          <button
             onClick={() => setViewMode('circle')}
             style={{ padding: '6px 14px', borderRadius: '100px', border: 'none', background: viewMode === 'circle' ? '#38bdf8' : 'transparent', color: viewMode === 'circle' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
           >
-            Vòng Bậc 5
+            Vòng tròn Bậc 5
           </button>
-          <button 
+          <button
             onClick={() => setViewMode('spider')}
             style={{ padding: '6px 14px', borderRadius: '100px', border: 'none', background: viewMode === 'spider' ? '#38bdf8' : 'transparent', color: viewMode === 'spider' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
           >
-            Mạng Nhện
+            Mạng lưới
           </button>
-          <button 
+          <button
             onClick={() => setViewMode('modes')}
             style={{ padding: '6px 14px', borderRadius: '100px', border: 'none', background: viewMode === 'modes' ? '#38bdf8' : 'transparent', color: viewMode === 'modes' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
           >
             Điệu Thức
           </button>
-          <button 
+          <button
             onClick={() => setViewMode('diatonic')}
             style={{ padding: '6px 14px', borderRadius: '100px', border: 'none', background: viewMode === 'diatonic' ? '#38bdf8' : 'transparent', color: viewMode === 'diatonic' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
           >
             Bảng Giọng
           </button>
-          <button 
+          <button
             onClick={() => setViewMode('sight')}
             style={{ padding: '6px 14px', borderRadius: '100px', border: 'none', background: viewMode === 'sight' ? '#38bdf8' : 'transparent', color: viewMode === 'sight' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
           >
@@ -249,28 +250,34 @@ function App() {
 
       {/* Main Content */}
       <main className="main-content">
-        <RecordingStudio
-          recordedNotes={recordedNotes}
-          isRecording={isRecording}
-          isPaused={isPaused}
-          onStart={handleStartRecording}
-          onPause={() => setIsPaused(true)}
-          onResume={() => setIsPaused(false)}
-          onStop={() => { setIsRecording(false); setIsPaused(false); setRecordedNotes([]); }}
-          onChordSelect={(chord) => {
-            setSelectedChord(chord);
-            if (chord && chord.notes) {
-              audioEngine.init().then(() => {
-                const voicing = audioEngine.setPlaybackVoicing(chord.notes);
-                if (voicing && !isPlayingRhythm && playingProgressionIdx === null) {
-                  audioEngine.playChord([voicing.bass, ...voicing.chord], '1m', 0.85);
-                }
-              });
-            }
-          }}
-        />
+        <div className="studio-container">
+          <RecordingStudio
+            recordedNotes={recordedNotes}
+            isRecording={isRecording}
+            isPaused={isPaused}
+            onStart={handleStartRecording}
+            onPause={() => setIsPaused(true)}
+            onResume={() => setIsPaused(false)}
+            onStop={() => { setIsRecording(false); setIsPaused(false); setRecordedNotes([]); }}
+            onChordSelect={(chord) => {
+              setSelectedChord(chord);
+              if (chord && chord.notes) {
+                audioEngine.init().then(() => {
+                  const voicing = audioEngine.setPlaybackVoicing(chord.notes);
+                  if (voicing && !isPlayingRhythm && playingProgressionIdx === null) {
+                    audioEngine.playChord([voicing.bass, ...voicing.chord], '1m', 0.85);
+                  }
+                });
+              }
+            }}
+          />
 
-
+          <CustomProgression 
+             isPlaying={playingProgressionIdx === 'custom'}
+             onPlay={(progression) => handlePlayProgression(progression, 'custom')}
+             onStop={() => handlePlayProgression(null, 'custom')}
+          />
+        </div>
 
         {viewMode === 'spider' && (
           <ChordGraph
@@ -288,7 +295,7 @@ function App() {
             showExtended={showExtendedChords}
           />
         )}
-        
+
         {viewMode === 'circle' && (
           <CircleOfFifths
             onChordSelect={(chord) => {
