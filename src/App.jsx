@@ -6,6 +6,7 @@ import PianoKeyboard from './components/PianoKeyboard';
 import RecordingStudio from './components/RecordingStudio';
 import CustomProgression from './components/CustomProgression';
 import ModesTable from './components/ModesTable';
+import IntervalsTable from './components/IntervalsTable';
 import DiatonicTable from './components/DiatonicTable';
 import SightReadingChart from './components/SightReadingChart';
 import { audioEngine } from './utils/AudioEngine';
@@ -208,6 +209,12 @@ function App() {
             Điệu Thức
           </button>
           <button
+            onClick={() => setViewMode('intervals')}
+            style={{ padding: '6px 14px', borderRadius: '100px', border: 'none', background: viewMode === 'intervals' ? '#38bdf8' : 'transparent', color: viewMode === 'intervals' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
+          >
+            Các Quãng
+          </button>
+          <button
             onClick={() => setViewMode('diatonic')}
             style={{ padding: '6px 14px', borderRadius: '100px', border: 'none', background: viewMode === 'diatonic' ? '#38bdf8' : 'transparent', color: viewMode === 'diatonic' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
           >
@@ -315,6 +322,12 @@ function App() {
         {viewMode === 'modes' && (
           <div style={{ flex: 1, width: '100%', display: 'flex', justifyContent: 'center', padding: '20px', overflowY: 'auto' }}>
             <ModesTable />
+          </div>
+        )}
+
+        {viewMode === 'intervals' && (
+          <div style={{ flex: 1, width: '100%', display: 'flex', justifyContent: 'center', padding: '20px', overflowY: 'auto' }}>
+            <IntervalsTable />
           </div>
         )}
 
