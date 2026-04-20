@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Music, Settings, Info, X, Play, Square, Cable } from 'lucide-react';
 import ChordGraph from './components/ChordGraph';
+import CircleOfFifths from './components/CircleOfFifths';
 import PianoKeyboard from './components/PianoKeyboard';
 import RecordingStudio from './components/RecordingStudio';
 import { audioEngine } from './utils/AudioEngine';
@@ -14,6 +15,8 @@ function App() {
   const [showInfo, setShowInfo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showExtendedChords, setShowExtendedChords] = useState(true);
+  const [viewMode, setViewMode] = useState('circle');
+
   const [activeRhythm, setActiveRhythm] = useState('');
   const [isPlayingRhythm, setIsPlayingRhythm] = useState(false);
   const [tempo, setTempo] = useState(100);
@@ -181,6 +184,21 @@ function App() {
           </div>
         </div>
 
+        <div style={{ display: 'flex', gap: '8px', zIndex: 200, position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+          <button 
+            onClick={() => setViewMode('circle')}
+            style={{ padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.2)', background: viewMode === 'circle' ? '#38bdf8' : 'rgba(0,0,0,0.4)', color: 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
+          >
+            Vòng tròn Bậc 5
+          </button>
+          <button 
+            onClick={() => setViewMode('spider')}
+            style={{ padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.2)', background: viewMode === 'spider' ? '#38bdf8' : 'rgba(0,0,0,0.4)', color: 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
+          >
+            Mạng nhện Chords
+          </button>
+        </div>
+
         <div className="nav-actions">
           <div className="midi-status" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(52, 211, 153, 0.1)', padding: '6px 12px', borderRadius: '100px', border: '1px solid rgba(52, 211, 153, 0.2)', fontSize: '11px', color: '#34d399', fontWeight: '600' }}>
             <Cable size={14} />
@@ -230,20 +248,39 @@ function App() {
             }
           }}
         />
-        <ChordGraph
-          onChordSelect={(chord) => {
-            setSelectedChord(chord);
-            if (chord && chord.notes) {
-              audioEngine.init().then(() => {
-                const voicing = audioEngine.setPlaybackVoicing(chord.notes);
-                if (voicing && !isPlayingRhythm && playingProgressionIdx === null) {
-                  audioEngine.playChord([voicing.bass, ...voicing.chord], '1m', 0.85);
-                }
-              });
-            }
-          }}
-          showExtended={showExtendedChords}
-        />
+
+
+
+        {viewMode === 'spider' ? (
+          <ChordGraph
+            onChordSelect={(chord) => {
+              setSelectedChord(chord);
+              if (chord && chord.notes) {
+                audioEngine.init().then(() => {
+                  const voicing = audioEngine.setPlaybackVoicing(chord.notes);
+                  if (voicing && !isPlayingRhythm && playingProgressionIdx === null) {
+                    audioEngine.playChord([voicing.bass, ...voicing.chord], '1m', 0.85);
+                  }
+                });
+              }
+            }}
+            showExtended={showExtendedChords}
+          />
+        ) : (
+          <CircleOfFifths
+            onChordSelect={(chord) => {
+              setSelectedChord(chord);
+              if (chord && chord.notes) {
+                audioEngine.init().then(() => {
+                  const voicing = audioEngine.setPlaybackVoicing(chord.notes);
+                  if (voicing && !isPlayingRhythm && playingProgressionIdx === null) {
+                    audioEngine.playChord([voicing.bass, ...voicing.chord], '1m', 0.85);
+                  }
+                });
+              }
+            }}
+          />
+        )}
 
         {/* Chord Info Panel */}
         {selectedChord && (
